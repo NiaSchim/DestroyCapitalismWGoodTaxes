@@ -1,5 +1,3 @@
-good, update this so that unfortunates can recieve debt between 20% to 100% the mode ammount of starting wealth (so the average ammount of wealth unless rich dorks are present then it is the ammount that most agents have which will be lower than the typical average). as for the percentage allotted to all rich dorks, whilst it will be random, the ammount taken from the rest of the population to create the random distribution of wealth among rich dorks ought to be between 50 and 90 % of the total wealth of the population when dealing with rich dorks. this is to see how this system operates to create equality in the face of extreme disparity.
-
 import os
 import multiprocessing
 import numpy as np
