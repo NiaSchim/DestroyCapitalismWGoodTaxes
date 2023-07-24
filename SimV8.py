@@ -139,11 +139,12 @@ class CustomOptimizer:
 
     def save_winner(self, point, score, folder):
         os.makedirs(folder, exist_ok=True)
-        np.savetxt(os.path.join(folder, f'winner_{len(self.winners)}.txt'), point)
-        with open(os.path.join(folder, f'winner_{len(self.winners)}_details.txt'), 'w') as file:
-            file.write(f'Score: {score}\n')
+        np.savetxt(os.path.join(folder, 'winner_{}.txt'.format(len(self.winners))), point)
+        with open(os.path.join(folder, 'winner_{}_details.txt'.format(len(self.winners))), 'w') as file:
+            file.write('Score: {}\n'.format(score))
             file.write('Taxation Algorithm:\n')
             file.write(str(tax_algorithm(point)))
+
 
     def evaluate(self, point):
         return objective_function(point, self.memory)
