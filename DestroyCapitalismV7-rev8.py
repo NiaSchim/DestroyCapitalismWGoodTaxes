@@ -113,6 +113,7 @@ class CustomOptimizer:
         self.current_score = float("-inf")
         self.no_improvement_streak = 0
         self.iterations = 0
+        self.max_consecutive_failures = 10
 
     def random_step(self):
         return np.random.uniform(-self.step_size, self.step_size, len(self.current_point))
@@ -129,57 +130,57 @@ class CustomOptimizer:
         return objective_function(point, self.memory)
 
     def explore(self):
-        # Calculate forces
-        force_vector = np.zeros_like(self.current_point)
-        if self.no_improvement_streak > 0:
-            direction_to_start = self.start_point - self.current_point
-            force_vector += direction_to_start * (self.no_improvement_streak / 10.0)
+        while self.consecutive_unsuccessful_runs < self.max_consecutive_failures:
+            # Calculate forces
+            force_vector = np.zeros_like(self.current_point)
+            if self.no_improvement_streak > 0:
+                direction_to_start = self.start_point - self.current_point
+                force_vector += direction_to_start * (self.no_improvement_streak / 10.0)
 
-        for winner in self.winners:
-            direction_to_winner = np.array(winner[0]) - self.current_point  # Convert to numpy array
-            norm = np.linalg.norm(direction_to_winner)
-            if norm != 0 and not np.any(np.isnan(direction_to_winner)):
-                force_vector -= direction_to_winner / norm
+            for winner in self.winners:
+                direction_to_winner = np.array(winner[0]) - self.current_point  # Convert to numpy array
+                norm = np.linalg.norm(direction_to_winner)
+                if norm != 0 and not np.any(np.isnan(direction_to_winner)):
+                    force_vector -= direction_to_winner / norm
 
-        # Update current point with random step and forces
-        step_vector = self.random_step() + force_vector
-        lower_bounds, upper_bounds = np.array(self.bounds).T
-        new_point = self.current_point + step_vector
-        new_point = np.clip(new_point, lower_bounds, upper_bounds)
-        new_score = self.evaluate(new_point)
+            # Update current point with random step and forces
+            step_vector = self.random_step() + force_vector
+            lower_bounds, upper_bounds = np.array(self.bounds).T
+            new_point = self.current_point + step_vector
+            new_point = np.clip(new_point, lower_bounds, upper_bounds)
+            new_score = self.evaluate(new_point)
 
-        # Check if the new point is an improvement
-        if new_score > self.current_score:
-            self.current_point = new_point
-            self.current_score = new_score
-            self.winners.append((new_point, new_score))
-            self.save_winner(new_point, new_score, 'winners')
-            self.consecutive_unsuccessful_runs = 0
-            self.no_improvement_streak = 0
-        else:
-            self.consecutive_unsuccessful_runs += 1
-            self.no_improvement_streak += 1
-
-        # Check if there's an improvement after a certain number of unsuccessful runs
-        if self.consecutive_unsuccessful_runs >= 10:
-            # Randomly select one of the previous winners
-            if self.winners:
-                random_winner = random.choice(self.winners)
-                self.current_point, self.current_score = random_winner
+            # Check if the new point is an improvement
+            if new_score > self.current_score:
+                self.current_point = new_point
+                self.current_score = new_score
+                self.winners.append((new_point, new_score))
+                self.save_winner(new_point, new_score, 'winners')
                 self.consecutive_unsuccessful_runs = 0
+                self.no_improvement_streak = 0
+            else:
+                self.consecutive_unsuccessful_runs += 1
+                self.no_improvement_streak += 1
 
-        # Save the current point and score to memory
-        self.memory.append((self.current_point, self.current_score))
+            # Check if there's an improvement after a certain number of unsuccessful runs
+            if self.consecutive_unsuccessful_runs >= 10:
+                # Randomly select one of the previous winners
+                if self.winners:
+                    random_winner = random.choice(self.winners)
+                    self.current_point, self.current_score = random_winner
+                    self.consecutive_unsuccessful_runs = 0
 
-        # Print real-time readouts every 10 iterations
-        if self.iterations % 10 == 0:
-            print("\nIteration:", self.iterations)
-            print("Current Point:", self.current_point)
-            print("Current Score:", self.current_score)
+            # Save the current point and score to memory
+            self.memory.append((self.current_point, self.current_score))
 
+            # Print real-time readouts every 10 iterations
+            if self.iterations % 10 == 0:
+                print("\nIteration:", self.iterations)
+                print("Current Point:", self.current_point)
+                print("Current Score:", self.current_score)
 
-        # Increment the iteration count
-        self.iterations += 1
+            # Increment the iteration count
+            self.iterations += 1
 
 def objective_function(point, memory):
     # Create an economy with the given tax algorithm
@@ -191,7 +192,7 @@ def objective_function(point, memory):
 
     # Run the economy for a certain amount of time
     start_time = time.time()
-    while time.time() - start_time < 6 * 60:  # Run for 6 minutes
+    while time.time() - start_time < 6 * 6:  # Run for 6 seconds times some number
         economy.perform_taxes()
         economy.perform_nianomics()
         economy.balance_treasury()
