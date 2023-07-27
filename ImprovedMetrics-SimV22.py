@@ -252,9 +252,25 @@ class CustomOptimizer:
 def calculate_distances(points):
     return pdist(points, 'euclidean')
 
-def calculate_longstraw(points):
-    distances = calculate_distances(points)
-    return np.max(distances)
+def wealth_distribution_to_box_and_whisker(wealth_distribution):
+    sorted_wealth = np.sort(wealth_distribution)
+    total_population = len(sorted_wealth)
+    lower_extreme = np.sum(sorted_wealth == sorted_wealth[0]) / total_population
+    lower_quartile = np.sum(sorted_wealth <= np.percentile(sorted_wealth, 25)) / total_population
+    median = np.sum((sorted_wealth >= np.percentile(sorted_wealth, 25)) & (sorted_wealth <= np.percentile(sorted_wealth, 50))) / total_population
+    upper_quartile = np.sum((sorted_wealth > np.percentile(sorted_wealth, 50)) & (sorted_wealth <= np.percentile(sorted_wealth, 75))) / total_population
+    upper_extreme = np.sum(sorted_wealth > np.percentile(sorted_wealth, 75)) / total_population
+    return np.array([lower_extreme, lower_quartile, median, upper_quartile, upper_extreme])
+
+def calculate_yardstick(wealthdays):
+    box_and_whisker_points = np.array([wealth_distribution_to_box_and_whisker(wealthday) for wealthday in wealthdays])
+    max_disparity_point = np.array([0.99, 0, 0, 0, 0.01])
+    bell_curve_point = np.array([0.2, 0.2, 0.2, 0.2, 0.2])
+    return np.max(calculate_distances(box_and_whisker_points))
+
+def calculate_longstraw(wealthdays):
+    box_and_whisker_points = np.array([wealth_distribution_to_box_and_whisker(wealthday) for wealthday in wealthdays])
+    return np.max(calculate_distances(box_and_whisker_points))
 
 def calculate_bellmarkyardstick(points):
     median_point = np.median(points)
@@ -266,17 +282,6 @@ def calculate_bellmarkyardstick(points):
 
 def calculate_area_under_graph(points):
     return np.trapz(points, dx=1)
-
-def calculate_yardstick(points):
-    total_wealth = np.sum(points)
-    max_disparity_point = np.zeros_like(points)
-    max_disparity_point[0] = total_wealth
-
-    mean_wealth = np.mean(points)
-    std_dev_wealth = np.std(points)
-    bell_curve_point = np.random.normal(loc=mean_wealth, scale=std_dev_wealth, size=len(points))
-
-    return distance.euclidean(max_disparity_point, bell_curve_point)
 
 def objective_function(point, memory):
     num_agents = 11192
@@ -301,9 +306,8 @@ def objective_function(point, memory):
     yardstick = calculate_yardstick(wealthdays)
     dynamism = longstraw / yardstick
 
-    peoplepoints = [np.histogram(wealthday, bins=100)[0] for wealthday in wealthdays]
-    peoplepoints = [peoplepoint / np.linalg.norm(peoplepoint) for peoplepoint in peoplepoints]
-    peoplepoints = np.mean(peoplepoints, axis=0)
+    box_and_whisker_points = np.array([wealth_distribution_to_box_and_whisker(wealthday) for wealthday in wealthdays])
+    peoplepoints = np.mean(box_and_whisker_points, axis=0)
 
     bellmarkyardstick = calculate_bellmarkyardstick(peoplepoints)
     area_under_graph = calculate_area_under_graph(peoplepoints)
